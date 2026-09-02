@@ -1,0 +1,450 @@
+package com.project.rules
+
+import project.ParcelaInput;
+import project.PreporukaGradnje;
+
+// ==========================================
+// 1. FAZA: URBANISTIČKI KOEFICIJENTI (Salience 100)
+// ==========================================
+
+rule "Urbanistički koeficijenti 1 - CENTAR"
+	salience 100
+	no-loop true
+    when
+        pi : ParcelaInput(urbanistickaZona == "CENTAR", procenatZauzetosti == 0.0, indeksIzgradjenosti == 0.0)
+    then
+        pi.setProcenatZauzetosti(0.60);
+        pi.setIndeksIzgradjenosti(3.5);
+		update(pi);
+		System.out.println("[DROOLS]: Uspešno primenjeni koeficijenti za zonu CENTAR (Zauzetost: 60%, Indeks: 3.5)");
+end
+
+rule "Urbanistički koeficijenti 2 - NOVI BEOGRAD"
+	salience 100
+	no-loop true
+    when
+        pi : ParcelaInput(urbanistickaZona == "NOVI_BEOGRAD", procenatZauzetosti == 0.0, indeksIzgradjenosti == 0.0)
+    then
+        pi.setProcenatZauzetosti(0.50);
+        pi.setIndeksIzgradjenosti(2.8);
+		update(pi);
+		System.out.println("[DROOLS]: Uspešno primenjeni koeficijenti za zonu NOVI_BEOGRAD (Zauzetost: 50%, Indeks: 2.8)");
+end
+
+rule "Urbanistički koeficijenti 3 - ŠIRI CENTAR"
+	salience 100
+	no-loop true
+    when
+        pi : ParcelaInput(urbanistickaZona == "SIRI_CENTAR", procenatZauzetosti == 0.0, indeksIzgradjenosti == 0.0)
+    then
+        pi.setProcenatZauzetosti(0.40);
+        pi.setIndeksIzgradjenosti(2.2);
+		update(pi);
+		System.out.println("[DROOLS]: Uspešno primenjeni koeficijenti za zonu SIRI_CENTAR (Zauzetost: 40%, Indeks: 2.2)");
+end
+
+rule "Urbanistički koeficijenti 4 - PERIFERIJA"
+	salience 100
+	no-loop true
+    when
+        pi : ParcelaInput(urbanistickaZona == "PERIFERIJA", procenatZauzetosti == 0.0, indeksIzgradjenosti == 0.0)
+    then
+        pi.setProcenatZauzetosti(0.30);
+        pi.setIndeksIzgradjenosti(0.8);
+		update(pi);
+		System.out.println("[DROOLS]: Uspešno primenjeni koeficijenti za zonu PERIFERIJA (Zauzetost: 30%, Indeks: 0.8)");
+end
+
+// ==========================================
+// 1.2 FAZA: MINIMALNA VELIČINA PARCELE (Salience 99)
+// ==========================================
+
+rule "Minimalna povrsina parcele - urbane zone"
+    salience 99
+    no-loop true
+    when
+        $pi: ParcelaInput( urbanistickaZona in ("CENTAR", "NOVI_BEOGRAD", "SIRI_CENTAR"), povrsinaParcele < 300.0 )
+        $pg: PreporukaGradnje( pogodnaZaIzgradnju == true )
+    then
+        $pg.setPogodnaZaIzgradnju(false);
+        $pg.setTipGradnje("NIJE POGODNO ZA IZGRADNJU");
+        $pg.dodajNapomenu("ZABRANA: Parcela je premala za stambenu izgradnju u ovoj zoni. Minimalna preporučena površina je 300 m2.");
+        update($pg);
+        System.out.println("[DROOLS]: ZABRANA - parcela ispod minimalne površine za urbanu zonu.");
+end
+
+rule "Minimalna povrsina parcele - periferija"
+    salience 99
+    no-loop true
+    when
+        $pi: ParcelaInput( urbanistickaZona == "PERIFERIJA", povrsinaParcele < 500.0 )
+        $pg: PreporukaGradnje( pogodnaZaIzgradnju == true )
+    then
+        $pg.setPogodnaZaIzgradnju(false);
+        $pg.setTipGradnje("NIJE POGODNO ZA IZGRADNJU");
+        $pg.dodajNapomenu("ZABRANA: Parcela je premala za stambenu izgradnju na periferiji. Minimalna preporučena površina je 500 m2.");
+        update($pg);
+        System.out.println("[DROOLS]: ZABRANA - parcela ispod minimalne površine za periferiju.");
+end
+
+// ==========================================
+// 1.5 FAZA: TRANSFORMCACIJA U STRIP MALL (Salience 95)
+// ==========================================
+
+rule "Biznis preporuka - Transformacija u Strip Mall / Retail Park"
+    salience 95 
+    no-loop true
+    when
+        $pi: ParcelaInput( urbanistickaZona == "PERIFERIJA", povrsinaParcele >= 5000.0, sirinaPristupneUlice >= 6.0 )
+        $pg: PreporukaGradnje( tipGradnje == null || tipGradnje == "Zgrada" )
+    then
+        $pg.setTipGradnje("STRIP_MALL");
+        $pg.setBrojSpratova(1);
+        $pg.setPotrebnaPodzemnaGaraza(false);
+        $pg.dodajNapomenu("STRATEŠKA PREPORUKA: Na osnovu veličine parcele i lokacije na periferiji uz široku saobraćajnicu, sistem preporučuje TRŽNI CENTAR.");
+        $pg.dodajNapomenu("EKONOMSKI BENEFIT: Drastično niži troškovi gradnje, brži povrat investicije i 100% parking na tlu.");
+        update($pg);
+        System.out.println("[DROOLS]: Aktivirana preporuka za TRŽNI CENTAR. Poništena stambena gradnja.");
+end
+
+// ==========================================
+// 2. FAZA: PRORAČUN POVRŠINA I OSNOVA (Salience 90)
+// ==========================================
+
+rule "Proračun maksimalne površine zgrade"
+	salience 90
+	no-loop true
+	when
+		pi : ParcelaInput(indeksIzgradjenosti > 0.0, $povrsina: povrsinaParcele, $indeks: indeksIzgradjenosti)
+		pg : PreporukaGradnje(maxPovrsina == 0.0, pogodnaZaIzgradnju == true)
+	then
+		double p = $povrsina * $indeks;
+		pg.setMaxPovrsina(p);
+		update(pg);
+		System.out.println("[DROOLS]: Izračunata maksimalna površina zgrade: " + p + " m2");
+end		
+
+rule "Procena površine osnove zgrade"
+	salience 90
+	no-loop true
+	when
+		pi: ParcelaInput(procenatZauzetosti > 0.0, $povrsinaParcele: povrsinaParcele, $zauzetost: procenatZauzetosti)
+		pg: PreporukaGradnje(maxOsnova == 0.0, pogodnaZaIzgradnju == true)
+	then
+		double maxOsnovaObjekta = $povrsinaParcele * $zauzetost;
+		pg.setMaxOsnova(maxOsnovaObjekta);
+		update(pg);
+		System.out.println("[DROOLS]: Izračunata osnova objekta je: " + maxOsnovaObjekta);
+end
+
+// ==========================================
+// 3. FAZA: PROSEČNE VELIČINE STANOVA (Salience 85)
+// ==========================================
+
+rule "Prosecna velicina stana za CENTAR je 55msq"
+	salience 85
+	when 
+		pi: ParcelaInput( urbanistickaZona == "CENTAR")
+		pg: PreporukaGradnje(prosecnaPovrsinaStana == 0.0 || prosecnaPovrsinaStana == 0)
+	then
+		pg.setProsecnaPovrsinaStana(55);
+		update(pg);
+		System.out.println("[DROOLS]: Prosečna veličina stana za oblast CENTAR je 55msq");
+end		
+		
+rule "Prosecna velicina stana za NOVI_BEOGRAD i SIRI_CENTAR je 65msq"
+	salience 85
+	when 
+		pi: ParcelaInput( urbanistickaZona == "NOVI_BEOGRAD" || urbanistickaZona == "SIRI_CENTAR" )
+		pg: PreporukaGradnje(prosecnaPovrsinaStana == 0.0 || prosecnaPovrsinaStana == 0)
+	then
+		pg.setProsecnaPovrsinaStana(65);
+		update(pg);
+		System.out.println("[DROOLS]: Prosečna veličina stana za oblast NOVI_BEOGRAD i SIRI_CENTAR je 65msq");
+end		
+
+rule "Prosecna velicina stana za PERIFERIJA je 75msq"
+	salience 85
+	when 
+		pi: ParcelaInput( urbanistickaZona == "PERIFERIJA" )
+		pg: PreporukaGradnje(prosecnaPovrsinaStana == 0.0 || prosecnaPovrsinaStana == 0)
+	then
+		pg.setProsecnaPovrsinaStana(75);
+		update(pg);
+		System.out.println("[DROOLS]: Prosečna veličina stana za oblast PERIFERIJA je 75msq");
+end	
+
+// ==========================================
+// 4. FAZA: PRORAČUN STANARA (Salience 80)
+// ==========================================
+
+rule "Broj stanova na osnovu ukupne povrsine"
+	salience 80
+	when
+		pg: PreporukaGradnje(ukupanBrojStanova == 0, maxPovrsina > 0.0, prosecnaPovrsinaStana > 0, $maxp: maxPovrsina, $p: prosecnaPovrsinaStana)
+	then
+		double maxPminusHodnici = $maxp * 0.80;
+		int brojStanova = (int) Math.ceil(maxPminusHodnici / $p);
+		pg.setUkupanBrojStanova(brojStanova);
+		update(pg);
+		System.out.println("[DROOLS]: Preporučen broj stanova na osnovu kapaciteta je: " + brojStanova);
+end
+
+// ==========================================
+// 5. FAZA: SPRATNOST (Salience 70)
+// ==========================================
+
+rule "Standardna procena spratnosti preko max gornje površine"
+	salience 70
+	when 
+		pi: ParcelaInput()
+		pg: PreporukaGradnje(brojSpratova == 0, maxOsnova > 0.0, maxPovrsina > 0.0, $osnova: maxOsnova, $povrsina: maxPovrsina)
+	then
+		int izracunatiSpratovi = (int) Math.ceil($povrsina / $osnova);
+		pg.setBrojSpratova(izracunatiSpratovi);
+		update(pg);
+		System.out.println("[DROOLS]: Izračunata standardna spratnost: " + izracunatiSpratovi);
+end
+
+// ==========================================
+// 5.5 FAZA: LIMITI SPRATNOSTI I LIFT (Salience 65)
+// ==========================================
+
+rule "Bezbednosni limit - uska ulica ili kliziste"
+	salience 65
+	no-loop true
+	when
+		pg: PreporukaGradnje(brojSpratova > 3)
+		(
+			ParcelaInput(sirinaPristupneUlice < 4.5)
+			or
+			ParcelaInput(stabilnostTerena == "KLIZISTE")
+		)
+	then
+		pg.setBrojSpratova(3);
+		update(pg);
+		System.out.println("[DROOLS]: Zbog bezbednosnog limita (uska ulica i/ili klizište), maksimalni broj spratova je spušten na 3");
+end
+
+rule "Potreban lift"
+	salience 65
+	when
+		pg: PreporukaGradnje(brojSpratova > 4, potrebanLift == false)
+	then
+		pg.setPotrebanLift(true);
+		update(pg);
+		System.out.println("[DROOLS]: Potrebnost lifta postavljena na true");
+end
+
+// ==========================================
+// 6. FAZA: INITIAL PARKING (Salience 60)
+// ==========================================
+
+rule "Proračun parking mesta i provera kapaciteta parcele"
+    salience 60
+    no-loop true
+    when
+        $pi: ParcelaInput( $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti, $preferiraTlo: preferiraParkingNaTlu, $normativ: parkingNormativ )
+        $pg: PreporukaGradnje( ukupanBrojStanova > 0, ukupanBrojParkingMesta == 0 )
+    then
+        int potrebnaMesta = (int) Math.ceil($pg.getUkupanBrojStanova() * $normativ);
+        $pg.setUkupanBrojParkingMesta(potrebnaMesta);
+        
+        double slobodnaPovrsinaPlaca = $povrsinaPlaca * (1.0 - $zauzetost);
+        int maksimalnoMestaNaTlu = (int) Math.floor(slobodnaPovrsinaPlaca / 25.0);
+        
+        if ($preferiraTlo && potrebnaMesta > maksimalnoMestaNaTlu) {
+            $pg.setPotrebnaPodzemnaGaraza(true);
+            $pg.dodajNapomenu("KOREKCIJA PARKINGA: Slobodna površina placa ne može da primi sva vozila na tlu.");
+            $pg.dodajNapomenu("REŠENJE: Aktivirana je obavezna izgradnja PODZEMNE GARAŽE.");
+        } else if ($preferiraTlo) {
+            $pg.setPotrebnaPodzemnaGaraza(false);
+            $pg.dodajNapomenu("Sva parking mesta uspešno pozicionirana na tlu.");
+        } else {
+            $pg.setPotrebnaPodzemnaGaraza(true);
+        }
+        update($pg);
+        System.out.println("[DROOLS]: Proračunato parking mesta: " + potrebnaMesta);
+end
+
+rule "Popust na parking zbog blizine javnog prevoza"
+    salience 59
+    no-loop true
+    when
+        $pi: ParcelaInput( blizinaJavnogPrevoza == true, urbanistickaZona in ("CENTAR", "NOVI_BEOGRAD", "SIRI_CENTAR") )
+        $pg: PreporukaGradnje( ukupanBrojParkingMesta > 0, parkingKorigovanZbogPrevoza == false, $trenutnoMesta: ukupanBrojParkingMesta )
+    then
+        int umanjenaMesta = (int) Math.ceil($trenutnoMesta * 0.8);
+        $pg.setUkupanBrojParkingMesta(umanjenaMesta);
+        $pg.setParkingKorigovanZbogPrevoza(true);
+        $pg.dodajNapomenu("POPUST NA PARKING: Zbog blizine stanice javnog prevoza, potreban broj parking mesta je umanjen za 20%.");
+        update($pg);
+        System.out.println("[DROOLS]: Umanjen broj parking mesta zbog blizine javnog prevoza: " + umanjenaMesta);
+end
+
+// ==========================================
+// 7. FAZA: EKSTERNI FAKTORI - LOKALI I RELJEF (Salience 50)
+// ==========================================
+
+rule "Inženjerska pravila - Bezbednost na klizištu"
+    salience 50
+    no-loop true
+    when
+        $pi: ParcelaInput( stabilnostTerena == "KLIZISTE" )
+        $pg: PreporukaGradnje( napomeneIOgranicenja not contains "TEHNIČKO UPOZORENJE: Teren je KLIZIŠTE. Obavezna je kompletna geomehanička studija sa bušotinama." )
+    then
+        $pg.dodajNapomenu("TEHNIČKO UPOZORENJE: Teren je KLIZIŠTE. Obavezna je kompletna geomehanička studija sa bušotinama.");
+        System.out.println("[DROOLS]: Dodata napomena za klizište.");
+end
+
+rule "Kaskadna gradnja za teren u nagibu"
+    salience 50
+    no-loop true
+    when
+        $pi: ParcelaInput( stabilnostTerena == "NAGIB" )
+        $pg: PreporukaGradnje( tipGradnje != "Zgrada sa suterenom" )
+    then
+        $pg.setTipGradnje("Zgrada sa suterenom");
+        $pg.dodajNapomenu("PREPORUKA PROJEKTOVANJA: Teren je NAGIB. Preporučuje se kaskadno oblikovanje objekta.");
+        update($pg);
+        System.out.println("[DROOLS]: Dodata napomena za nagib.");
+end
+
+rule "Korigovanje broja stanova u slučaju da korisnik želi lokal u prizemlju"
+	salience 50
+	no-loop true
+	when
+		$pi: ParcelaInput(zeliLokaleUPrizemlju == true)
+		$pg: PreporukaGradnje(maxOsnova > 0.0, ukupanBrojStanova > 0, prosecnaPovrsinaStana > 0, stanoviKorigovaniZbogLokala == false, $osnova: maxOsnova, $brojStanova: ukupanBrojStanova, $p: prosecnaPovrsinaStana)
+	then
+		int n = (int) Math.floor($osnova / $p);
+		int	noviBrojStanova = $brojStanova - n;
+		$pg.setUkupanBrojStanova(noviBrojStanova);
+		$pg.setStanoviKorigovaniZbogLokala(true);
+		update($pg);
+		System.out.println("[DROOLS]: Usled biranja lokala u prizemlju, korigovan je broj mogućih stanova.");
+end
+
+rule "Korigovanje broja parking mesta usled lokala"
+	salience 49
+	no-loop true
+	when
+		$pi: ParcelaInput(zeliLokaleUPrizemlju == true, $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti, $normativ: parkingNormativ, $povrsinaLokala: povrsinaLokala)
+		$pg: PreporukaGradnje(maxOsnova > 0.0, ukupanBrojStanova > 0, prosecnaPovrsinaStana > 0, ukupanBrojParkingMesta > 0, parkingKorigovanZbogLokala == false, $osnova: maxOsnova, $brojStanova: ukupanBrojStanova, $p: prosecnaPovrsinaStana, $parkingMesta: ukupanBrojParkingMesta)
+	then
+		int n = (int) Math.floor($osnova / $p);
+		int nepotrebnaMesta = (int) Math.ceil(n * $normativ);
+		// POPRAVLJENO: Koristimo stvarnu površinu lokala unetu sa frontenda, a ne celu osnovu zgrade
+		int mestaZaLokal = (int) Math.ceil($povrsinaLokala / 70.0);
+        int potrebnaMesta = $parkingMesta - nepotrebnaMesta + mestaZaLokal;
+
+        $pg.setUkupanBrojParkingMesta(potrebnaMesta);
+        $pg.setParkingKorigovanZbogLokala(true);
+
+        double slobodnaPovrsinaPlaca = $povrsinaPlaca * (1.0 - $zauzetost);
+        int maksimalnoMestaNaTlu = (int) Math.floor(slobodnaPovrsinaPlaca / 25.0);
+
+        if (potrebnaMesta > maksimalnoMestaNaTlu) {
+            $pg.setPotrebnaPodzemnaGaraza(true);
+        }
+        update($pg);
+        System.out.println("[DROOLS]: Korigovan parking za lokale: " + potrebnaMesta);
+end
+
+// ==========================================
+// 8. FAZA: GREJANJE I INFRASTRUKTURA (Salience 30)
+// ==========================================
+
+rule "Preporuka grejanja - Gradski toplovod"
+    salience 30
+    when
+        $pi: ParcelaInput( urbanistickaZona in ("CENTAR", "NOVI_BEOGRAD"))
+        $pg: PreporukaGradnje( grejanje == null, pogodnaZaIzgradnju == true )
+    then
+        $pg.setGrejanje("GRADSKI_TOPLOVOD");
+        $pg.dodajNapomenu("SISTEMSKA PREPORUKA: Izabran je GRADSKI TOPLOVOD.");
+        update($pg);
+end
+
+rule "Preporuka grejanja - Prirodni gas za širi centar"
+    salience 30
+    when
+        $pi: ParcelaInput( urbanistickaZona == "SIRI_CENTAR" )
+        $pg: PreporukaGradnje( grejanje == null, pogodnaZaIzgradnju == true )
+    then
+        $pg.setGrejanje("PRIRODNI_GAS");
+        $pg.dodajNapomenu("SISTEMSKA PREPORUKA: Izabran je PRIRODNI GAS.");
+        update($pg);
+end
+
+rule "Preporuka grejanja - Periferija (Struja)"
+    salience 30 
+    when
+        $pi: ParcelaInput( urbanistickaZona == "PERIFERIJA" )
+        $pg: PreporukaGradnje( ukupanBrojStanova > 0, ukupanBrojStanova <= 10, grejanje == null, pogodnaZaIzgradnju == true )
+    then
+        $pg.setGrejanje("ELEKTRICNA_ENERGIJA");
+        $pg.dodajNapomenu("SISTEMSKA PREPORUKA: Za manji objekat na periferiji preporučuje se struja.");
+        update($pg);
+end
+
+rule "Preporuka grejanja - Periferija (Toplotne pumpe)"
+    salience 30
+    when
+        $pi: ParcelaInput( urbanistickaZona == "PERIFERIJA" )
+        $pg: PreporukaGradnje( ukupanBrojStanova > 10, grejanje == null, pogodnaZaIzgradnju == true )
+    then
+        $pg.setGrejanje("TOPLOTNE_PUMPE");
+        $pg.dodajNapomenu("SISTEMSKA PREPORUKA: Izabrane su centralne TOPLOTNE PUMPE.");
+        update($pg);
+end
+
+rule "Hidropumpa za visoke objekte"
+    salience 30
+    no-loop true
+    when
+        $pg: PreporukaGradnje( brojSpratova > 5, napomeneIOgranicenja not contains "VODOVOD: Obavezno projektovanje prostorije za HIDROFOR u suterenu." )
+    then
+        $pg.dodajNapomenu("VODOVOD: Obavezno projektovanje prostorije za HIDROFOR u suterenu.");
+end
+
+rule "Protivpožarna hidrantska mreža"
+    salience 30
+    no-loop true
+    when
+        $pg: PreporukaGradnje( (maxPovrsina > 2000.0 || potrebnaPodzemnaGaraza == true), napomeneIOgranicenja not contains "POŽARNA BEZBEDNOST: Obavezno projektovanje unutrašnje hidrantske mreže." )
+    then
+        $pg.dodajNapomenu("POŽARNA BEZBEDNOST: Obavezno projektovanje unutrašnje hidrantske mreže.");
+end
+
+rule "Stanice za punjenje električnih vozila"
+    salience 30
+    no-loop true
+    when
+        $pg: PreporukaGradnje( potrebnaPodzemnaGaraza == true, napomeneIOgranicenja not contains "ELEKTROMOBILNOST: Preporučuje se ugradnja elektropunjača u garaži." )
+        $pi: ParcelaInput( urbanistickaZona in ("CENTAR","NOVI_BEOGRAD") )
+    then
+        $pg.dodajNapomenu("ELEKTROMOBILNOST: Preporučuje se ugradnja elektropunjača u garaži.");
+end
+
+rule "Uska ulica i strm teren (Zabrana podzemne garaže)"
+    salience 31
+    no-loop true
+    when
+        $pi: ParcelaInput( sirinaPristupneUlice < 4.5, stabilnostTerena in ("NAGIB", "KLIZISTE") )
+        $pg: PreporukaGradnje( potrebnaPodzemnaGaraza != false )
+    then
+        $pg.setPotrebnaPodzemnaGaraza(false);
+        $pg.dodajNapomenu("KRITIČAN KONFLIKT: Uska ulica i strm teren onemogućavaju bezbednu rampu.");
+        update($pg);
+end
+
+rule "Bezbednosa zabrana - Izgradnja garaže na klizištu"
+    salience 29
+    no-loop true
+    when
+        $pi: ParcelaInput( stabilnostTerena == "KLIZISTE" )
+        $pg: PreporukaGradnje( potrebnaPodzemnaGaraza == true, napomeneIOgranicenja not contains "CRVENI ALARM - GRAĐEVINSKI RIZIK: Garaža na terenu tipa KLIZIŠTE zahteva sisteme spojenih šipova." )
+    then
+        $pg.dodajNapomenu("CRVENI ALARM - GRAĐEVINSKI RIZIK: Garaža na terenu tipa KLIZIŠTE zahteva sisteme spojenih šipova.");
+end

@@ -1,0 +1,295 @@
+.app-layout-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(35deg, #f4fcd9 0%, #ffffff 100%);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  color: #1f1f1f;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+}
+
+.parcela-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group.indent {
+  padding-left: 1.5rem;
+  border-left: 3px solid #3498db;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="number"] {
+  padding: 0.6rem;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #eeff00;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+button {
+  padding: 0.8rem;
+  background-color: #4e40d4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 1rem;
+}
+
+button:hover {
+  background-color: #bac700;
+}
+
+button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.status-message {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  text-align: center;
+  background-color: #e8f4fd;
+  border: 1px solid #d4e6f1;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.radio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+  padding: 0.5rem;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.radio-label input[type="radio"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+}
+
+input[type="radio"] {
+  background-color: #3498db;
+  border-color: #3498db;
+}
+
+.form-select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 40px; 
+}
+
+.form-select:hover {
+  border-color: #888;
+}
+
+.form-select:focus {
+  border-color: #007bff; 
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); 
+}
+
+
+.form-select option {
+  padding: 10px;
+  background-color: #fff;
+  color: #333;
+}
+
+/* Glavni kontejner koji drži obe strane ekrana */
+.app-layout-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 600px; /* Početno je širina dovoljna samo za jedan prozor */
+  margin: 0 auto;
+  padding: 20px;
+  gap: 0px;
+  transition: max-width 0.5s ease-in-out, gap 0.5s ease-in-out;
+}
+
+/* Leva strana (Forma) u svom standardnom stanju */
+.panel-form-side {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+/* Desna strana u kojoj se nalazi prozor sa rezultatima */
+.panel-results-side {
+  flex: 0;
+  max-width: 0px;
+  width: 100%;
+  opacity: 0;
+  visibility: hidden;
+  box-sizing: border-box;
+  /* Glatko otvaranje desne polovine bez odskakanja */
+  transition: flex 0.5s ease-in-out, max-width 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+/* --- STANJE NAKON ŠTO REZULTATI STIGNU (Aktivira ga .has-results klasa) --- */
+
+.app-layout-container.has-results {
+  max-width: 1230px; /* Širi se tačno na veličinu dva prozora + gap */
+  gap: 30px;
+}
+
+.app-layout-container.has-results .panel-form-side {
+  /* Forma ostaje iste fiksne širine ali se prirodno pomera ulevo zbog flex-a */
+  flex: 1; 
+  max-width: 550px;
+}
+
+.app-layout-container.has-results .panel-results-side {
+  flex: 1;
+  max-width: 600px; /* Potpuno identična širina kao i forma */
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Sam prozor sa rezultatima koji "raste" iz centra svoje polovine */
+.rezultat-kontejner-flat {
+  width: 100%;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+/* Definicija animacije širenja iz jedne tačke (centra) */
+@keyframes growFromCenter {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loading-container-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  min-height: 400px; /* Drži visinu u balansu sa formom dok se vrti */
+  box-sizing: border-box;
+}
+
+.loading-container-center p {
+  margin-top: 15px;
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+}
+
+.drools-spinner {
+  width: 45px;
+  height: 45px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.fade-in {
+  opacity: 0;
+  animation: linearFadeIn 0.7s ease-in-out forwards;
+}
+
+@keyframes linearFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

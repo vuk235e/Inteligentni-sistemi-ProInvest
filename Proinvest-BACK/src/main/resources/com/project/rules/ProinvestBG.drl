@@ -240,31 +240,58 @@ end
 // 6. FAZA: INITIAL PARKING (Salience 60)
 // ==========================================
 
-rule "Proračun parking mesta i provera kapaciteta parcele"
+rule "Proračun parking mesta"
     salience 60
     no-loop true
     when
-        $pi: ParcelaInput( $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti, $preferiraTlo: preferiraParkingNaTlu, $normativ: parkingNormativ )
-        $pg: PreporukaGradnje( ukupanBrojStanova > 0, ukupanBrojParkingMesta == 0 )
+        $pi: ParcelaInput( $normativ: parkingNormativ )
+        $pg: PreporukaGradnje( ukupanBrojStanova > 0, ukupanBrojParkingMesta == 0, $brojStanova: ukupanBrojStanova )
     then
-        int potrebnaMesta = (int) Math.ceil($pg.getUkupanBrojStanova() * $normativ);
+        int potrebnaMesta = (int) Math.ceil($brojStanova * $normativ);
         $pg.setUkupanBrojParkingMesta(potrebnaMesta);
-        
-        double slobodnaPovrsinaPlaca = $povrsinaPlaca * (1.0 - $zauzetost);
-        int maksimalnoMestaNaTlu = (int) Math.floor(slobodnaPovrsinaPlaca / 25.0);
-        
-        if ($preferiraTlo && potrebnaMesta > maksimalnoMestaNaTlu) {
-            $pg.setPotrebnaPodzemnaGaraza(true);
-            $pg.dodajNapomenu("KOREKCIJA PARKINGA: Slobodna površina placa ne može da primi sva vozila na tlu.");
-            $pg.dodajNapomenu("REŠENJE: Aktivirana je obavezna izgradnja PODZEMNE GARAŽE.");
-        } else if ($preferiraTlo) {
-            $pg.setPotrebnaPodzemnaGaraza(false);
-            $pg.dodajNapomenu("Sva parking mesta uspešno pozicionirana na tlu.");
-        } else {
-            $pg.setPotrebnaPodzemnaGaraza(true);
-        }
         update($pg);
         System.out.println("[DROOLS]: Proračunato parking mesta: " + potrebnaMesta);
+end
+
+rule "Odluka o garaži: preferira tlo, kapacitet nedovoljan"
+    salience 60
+    no-loop true
+    when
+        $pi: ParcelaInput( preferiraParkingNaTlu == true, $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti )
+        $pg: PreporukaGradnje( ukupanBrojParkingMesta > 0, garazaOdredjenaPocetno == false,
+                ukupanBrojParkingMesta > (int) Math.floor(($povrsinaPlaca * (1.0 - $zauzetost)) / 25.0) )
+    then
+        $pg.setPotrebnaPodzemnaGaraza(true);
+        $pg.setGarazaOdredjenaPocetno(true);
+        $pg.dodajNapomenu("KOREKCIJA PARKINGA: Slobodna površina placa ne može da primi sva vozila na tlu.");
+        $pg.dodajNapomenu("REŠENJE: Aktivirana je obavezna izgradnja PODZEMNE GARAŽE.");
+        update($pg);
+end
+
+rule "Odluka o garaži: preferira tlo, kapacitet dovoljan"
+    salience 60
+    no-loop true
+    when
+        $pi: ParcelaInput( preferiraParkingNaTlu == true, $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti )
+        $pg: PreporukaGradnje( ukupanBrojParkingMesta > 0, garazaOdredjenaPocetno == false,
+                ukupanBrojParkingMesta <= (int) Math.floor(($povrsinaPlaca * (1.0 - $zauzetost)) / 25.0) )
+    then
+        $pg.setPotrebnaPodzemnaGaraza(false);
+        $pg.setGarazaOdredjenaPocetno(true);
+        $pg.dodajNapomenu("Sva parking mesta uspešno pozicionirana na tlu.");
+        update($pg);
+end
+
+rule "Odluka o garaži: investitor ne preferira tlo"
+    salience 60
+    no-loop true
+    when
+        $pi: ParcelaInput( preferiraParkingNaTlu == false )
+        $pg: PreporukaGradnje( ukupanBrojParkingMesta > 0, garazaOdredjenaPocetno == false )
+    then
+        $pg.setPotrebnaPodzemnaGaraza(true);
+        $pg.setGarazaOdredjenaPocetno(true);
+        update($pg);
 end
 
 rule "Popust na parking zbog blizine javnog prevoza"
@@ -329,26 +356,31 @@ rule "Korigovanje broja parking mesta usled lokala"
 	salience 49
 	no-loop true
 	when
-		$pi: ParcelaInput(zeliLokaleUPrizemlju == true, $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti, $normativ: parkingNormativ, $povrsinaLokala: povrsinaLokala)
+		$pi: ParcelaInput(zeliLokaleUPrizemlju == true, $normativ: parkingNormativ, $povrsinaLokala: povrsinaLokala)
 		$pg: PreporukaGradnje(maxOsnova > 0.0, ukupanBrojStanova > 0, prosecnaPovrsinaStana > 0, ukupanBrojParkingMesta > 0, parkingKorigovanZbogLokala == false, $osnova: maxOsnova, $brojStanova: ukupanBrojStanova, $p: prosecnaPovrsinaStana, $parkingMesta: ukupanBrojParkingMesta)
 	then
 		int n = (int) Math.floor($osnova / $p);
 		int nepotrebnaMesta = (int) Math.ceil(n * $normativ);
-		// POPRAVLJENO: Koristimo stvarnu površinu lokala unetu sa frontenda, a ne celu osnovu zgrade
 		int mestaZaLokal = (int) Math.ceil($povrsinaLokala / 70.0);
         int potrebnaMesta = $parkingMesta - nepotrebnaMesta + mestaZaLokal;
 
         $pg.setUkupanBrojParkingMesta(potrebnaMesta);
         $pg.setParkingKorigovanZbogLokala(true);
-
-        double slobodnaPovrsinaPlaca = $povrsinaPlaca * (1.0 - $zauzetost);
-        int maksimalnoMestaNaTlu = (int) Math.floor(slobodnaPovrsinaPlaca / 25.0);
-
-        if (potrebnaMesta > maksimalnoMestaNaTlu) {
-            $pg.setPotrebnaPodzemnaGaraza(true);
-        }
         update($pg);
         System.out.println("[DROOLS]: Korigovan parking za lokale: " + potrebnaMesta);
+end
+
+rule "Odluka o garaži usled lokala: kapacitet nedovoljan"
+	salience 49
+	no-loop true
+	when
+		$pi: ParcelaInput(zeliLokaleUPrizemlju == true, $povrsinaPlaca: povrsinaParcele, $zauzetost: procenatZauzetosti)
+		$pg: PreporukaGradnje(parkingKorigovanZbogLokala == true, garazaOdredjenaZbogLokala == false,
+				ukupanBrojParkingMesta > (int) Math.floor(($povrsinaPlaca * (1.0 - $zauzetost)) / 25.0))
+	then
+		$pg.setPotrebnaPodzemnaGaraza(true);
+		$pg.setGarazaOdredjenaZbogLokala(true);
+		update($pg);
 end
 
 // ==========================================

@@ -19,11 +19,12 @@ public class PreporukaGradnje {
     //mogli bismo da dodamo br tipova stanova npr x grasonjera, x jednosobnih, x dvosobnih
     private boolean pogodnaZaIzgradnju = true;
 
-    // Interni markeri za Drools engine (sprečavaju višestruko izvršavanje korekcionih pravila
-    // usled ponovnog update() od strane drugih pravila); ne serijalizuju se u JSON odgovor.
+    // ovo spprečava višestruko izvršavanje korekcionih pravila
     private transient boolean stanoviKorigovaniZbogLokala = false;
     private transient boolean parkingKorigovanZbogLokala = false;
     private transient boolean parkingKorigovanZbogPrevoza = false;
+    private transient boolean garazaOdredjenaPocetno = false;
+    private transient boolean garazaOdredjenaZbogLokala = false;
 
     public PreporukaGradnje() {}
 
@@ -57,6 +58,22 @@ public class PreporukaGradnje {
 
     public void setPogodnaZaIzgradnju(boolean pogodnaZaIzgradnju) {
         this.pogodnaZaIzgradnju = pogodnaZaIzgradnju;
+    }
+
+    public boolean isGarazaOdredjenaPocetno() {
+        return garazaOdredjenaPocetno;
+    }
+
+    public void setGarazaOdredjenaPocetno(boolean garazaOdredjenaPocetno) {
+        this.garazaOdredjenaPocetno = garazaOdredjenaPocetno;
+    }
+
+    public boolean isGarazaOdredjenaZbogLokala() {
+        return garazaOdredjenaZbogLokala;
+    }
+
+    public void setGarazaOdredjenaZbogLokala(boolean garazaOdredjenaZbogLokala) {
+        this.garazaOdredjenaZbogLokala = garazaOdredjenaZbogLokala;
     }
     
     
